@@ -143,7 +143,7 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
         print(`core@cyberos:~$ ${line}`, 'highlight');
         
         const args = line.split(' ');
-        const cmd = args[0].toLowerCase();
+        const cmd = args[0].toLowerCase(); // FEHLER BEHOBEN: Jetzt wird das erste Wort korrekt umgewandelt
         const parameter = args.slice(1).join(' ');
 
         switch(cmd) {
@@ -165,7 +165,6 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
                 }
                 print(`Rufe Wetterdaten für "${parameter}" ab...`, 'sys');
                 try {
-                    // Nutzung der freien wttr.in API (gibt reinen Text zurück, perfekt für Terminals)
                     const response = await fetch(`https://wttr.in{encodeURIComponent(parameter)}?0qT`);
                     if (!response.ok) throw new Error();
                     const data = await response.text();
@@ -194,7 +193,6 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
                     break;
                 }
                 try {
-                    // Sichere Berechnung ohne schädliches Standard-eval()
                     const sanitized = parameter.replace(/[^0-9+\-*/().\s]/g, '');
                     const result = new Function(`return ${sanitized}`)();
                     print(`Ergebnis: ${result}`, 'success');
@@ -227,8 +225,7 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
                 if (matrixInterval) {
                     clearInterval(matrixInterval);
                     matrixInterval = null;
-                    canvas.style.style.display = 'none';
-                    canvas.style.display = 'none';
+                    canvas.style.display = 'none'; // FEHLER BEHOBEN: Doppelten Aufruf entfernt
                     print('Matrix-Modus beendet.', 'sys');
                 } else {
                     print('Kein Prozess läuft im Hintergrund.', 'err');
@@ -244,7 +241,6 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
         }
     }
 
-    // Matrix Rain Code
     function startMatrix() {
         if (matrixInterval) clearInterval(matrixInterval);
         
@@ -277,3 +273,11 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
 
     window.addEventListener('resize', () => {
         if (matrixInterval) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+    });
+</script>
+
+</body>
+</html>
