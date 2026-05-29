@@ -165,14 +165,31 @@ Tippe <span class="highlight">'help'</span> für die Befehlsliste.
                 }
                 print(`Rufe Wetterdaten für "${parameter}" ab...`, 'sys');
                 try {
-                    const response = await fetch(`https://wttr.in{encodeURIComponent(parameter)}?0qT`);
+                    // Nutzung der JSON-Schnittstelle über einen datenschutzfreundlichen CORS-Proxy
+                    const response = await fetch(`https://allorigins.win{encodeURIComponent(`https://wttr.is{parameter}?format=j1`)}`);
                     if (!response.ok) throw new Error();
-                    const data = await response.text();
-                    print(data);
+                    
+                    const resData = await response.json();
+                    const weatherData = JSON.parse(resData.contents);
+                    
+                    const current = weatherData.current_condition[0];
+                    const area = weatherData.nearest_area[0];
+                    
+                    const outputString = 
+                        ` Wetterbericht für: ${area.areaName[0].value} (${area.country[0].value})\n` +
+                        `--------------------------------------------------\n` +
+                        ` Zustand:          ${current.lang_de ? current.lang_de[0].value : current.weatherDesc[0].value}\n` +
+                        ` Temperatur:       ${current.temp_C}°C (Gefühlt wie ${current.feelLikeC}°C)\n` +
+                        ` Luftfeuchtigkeit: ${current.humidity}%\n` +
+                        ` Windgeschw.:      ${current.windspeedKmph} km/h\n` +
+                        ` Niederschlag:     ${current.precipMM} mm`;
+                        
+                    print(outputString, 'success');
                 } catch (e) {
-                    print('Fehler beim Abrufen der Wetterdaten. Stadt richtig geschrieben?', 'err');
+                    print('Fehler beim Abrufen der Wetterdaten. Proxy überlastet oder Stadt unbekannt.', 'err');
                 }
                 break;
++
 
             case 'myip':
                 print('Verbinde mit IP-Server...', 'sys');
