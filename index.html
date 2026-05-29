@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Terminal</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #terminal {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+
+        .prompt {
+            color: #00ff00;
+            margin-right: 10px;
+            user-select: none;
+        }
+
+        #command-input {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: inherit;
+            flex-grow: 1;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="terminal">
+    <div id="output">Willkommen im Web-Terminal!
+Tippe 'help' für eine Liste der Befehle.
+
+</div>
+    <div class="input-line">
+        <span class="prompt">user@web-terminal:~$</span>
+        <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false">
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('command-input');
+    const output = document.getElementById('output');
+
+    // Fokus auf dem Input-Feld halten, wenn man in das Terminal klickt
+    document.getElementById('terminal').addEventListener('click', () => {
+        input.focus();
+    });
+
+    input.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const command = input.value.trim();
+            if (command.length > 0) {
+                executeCommand(command);
+            }
+            input.value = '';
+        }
+    });
+
+    function printText(text) {
+        output.innerText += text + '\n';
+        // Automatisch nach unten scrollen
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function executeCommand(cmd) {
+        // Zeige den eingegebenen Befehl im Verlauf an
+        printText(`user@web-terminal:~$ ${cmd}`);
+
+        const lowerCmd = cmd.toLowerCase();
+
+        // Befehlslogik
+        if (lowerCmd === 'help') {
+            printText('Verfügbare Befehle:\n  help  - Zeigt diese Hilfe an\n  clear - Leert den Bildschirm\n  date  - Zeigt das aktuelle Datum\n  about - Infos über dieses Terminal');
+        } else if (lowerCmd === 'clear') {
+            output.innerText = '';
+        } else if (lowerCmd === 'date') {
+            printText(new Date().toString());
+        } else if (lowerCmd === 'about') {
+            printText('Dieses Terminal wurde mit reinem HTML, CSS und JavaScript erstellt.');
+        } else {
+            printText(`Fehler: Befehl "${cmd}" nicht gefunden.`);
+        }
+    }
+</script>
+
+</body>
+</html>
