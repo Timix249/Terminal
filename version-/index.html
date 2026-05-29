@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Web Terminal</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: #33ff33;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            margin: 0;
+            text-shadow: 0 0 5px rgba(51, 255, 51, 0.4);
+        }
+
+        #terminal {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #0a0a0a;
+            border: 2px solid #22aa22;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.15);
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+
+        .prompt {
+            color: #11ff11;
+            margin-right: 10px;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        #command-input {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: inherit;
+            flex-grow: 1;
+            outline: none;
+            caret-color: #33ff33;
+        }
+
+        .system-msg { color: #888888; }
+        .error-msg { color: #ff3333; text-shadow: 0 0 5px rgba(255, 51, 51, 0.4); }
+        .success-msg { color: #ffff33; }
+    </style>
+</head>
+<body>
+
+<div id="terminal">
+    <div id="output"><span class="system-msg">Matrix OS v2.4.2 geladen...
+Tippe 'help' für alle verfügbaren Befehle.</span>
+
+</div>
+    <div class="input-line">
+        <span class="prompt" id="prompt-label">guest@matrix:~$_</span>
+        <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false">
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('command-input');
+    const output = document.getElementById('output');
+    const promptLabel = document.getElementById('prompt-label');
+
+    // Befehlshistorie
+    let commandHistory = [];
+    let historyIndex = -1;
+
+    // Virtuelles Dateisystem
+    let currentDir = "root";
+    const fileSystem = {
+        "root": {
+            "dirs": ["projekte", "geheim"],
+            "files": { "readme.txt": "Willkommen im System. Nutze 'ls' und 'cd'." }
+        },
+        "root/projekte": {
+            "dirs": [],
+            "files": { "code.js": "console.log('Hello World');" }
+        },
+        "root/geheim": {
+            "dirs": [],
+            "files": { "passwörter.txt": "Admin-Passwort: 42" }
+        }
+    };
+
+    document.getElementById('terminal').addEventListener('click', () => input.focus());
+
+    input.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const command = input.value.trim();
+            if (command.length > 0) {
+                commandHistory.push(command);
+                historyIndex = commandHistory.length;
+                executeCommand(command);
+            }
+            input.value = '';
+        } else if (event.key === 'ArrowUp') {
+            if (historyIndex > 0) {
+                historyIndex--;
+                input.value = commandHistory[historyIndex];
+            }
+            event.preventDefault();
+        } else if (event.key === 'ArrowDown') {
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                input.value = commandHistory[historyIndex];
+            } else {
+                historyIndex = commandHistory.length;
+                input.value = '';
+            }
+            event.preventDefault();
+        }
+    });
+
+    function printText(text, className = '') {
+        const span = document.createElement('span');
+        span.className = className;
+        span.innerText = text + '\n';
+        output.appendChild(span);
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function getDisplayPath() {
+        return currentDir === "root" ? "~" : "~/" + currentDir.replace("root/", "");
+    }
+
+    function executeCommand(cmdLine) {
+        // Zeige den Prompt im Verlauf
+        printText(`${promptLabel.innerText.replace('_', '')} ${cmdLine}`);
+
+        const parts = cmdLine.split(' ');
+        const cmd = parts[0].toLowerCase();
+        const arg = parts.slice(1).join(' ');
+
+        switch(cmd) {
+            case 'help':
+                printText('Verfügbare Befehle:\n' +
+                          '  ls             - Listet Dateien und Ordner im aktuellen Verzeichnis auf\n' +
+                          '  cd [ordner]    - Wechselt das Verzeichnis (Nutze "cd .." zum Zurückgehen)\n' +
+                          '  cat [datei]    - Zeigt den Inhalt einer Datei an\n' +
+                          '  touch [datei]  - Erstellt eine leere neue Datei\n' +
+                          '  clear          - Leert den Bildschirm\n' +
+                          '  date           - Zeigt die aktuelle Uhrzeit\n' +
+                          '  sudo [befehl]  - Führt einen Befehl als Admin aus\n' +
+                          '  joke           - Erzählt einen schlechten Programmierer-Witz\n' +
+                          '  whoami         - Wer bist du eigentlich?');
+                break;
+
+            case 'ls':
+                const dir = fileSystem[currentDir];
+                let items = [];
+                dir.dirs.forEach(d => items.push(`[DIR]  ${d}`));
+                Object.keys(dir.files).forEach(f => items.push(`[FILE] ${f}`));
+                if(items.length === 0) {
+                    printText('(Verzeichnis ist leer)', 'system-msg');
+                } else {
+                    printText(items.join('\n'));
+                }
+                break;
+
+            case 'cd':
+                if (!arg || arg === '.') {
+                    break;
+                }
+                if (arg === '..') {
+                    if (currentDir === "root") {
+                        printText('Bereits im Hauptverzeichnis.', 'error-msg');
+                    } else {
+                        const pathParts = currentDir.split('/');
+                        pathParts.pop();
+                        currentDir = pathParts.join('/');
+                    }
+                } else {
+                    const targetPath = currentDir + "/" + arg;
+                    if (fileSystem[currentDir].dirs.includes(arg) && fileSystem[targetPath]) {
+                        currentDir = targetPath;
+                    } else {
+                        printText(`Ordner "${arg}" nicht gefunden.`, 'error-msg');
+                    }
+                }
+                break;
+
+            case 'cat':
+                if (!arg) {
+                    printText('Fehler: Keine Datei angegeben. Syntax: cat [dateiname]', 'error-msg');
+                } else if (fileSystem[currentDir].files[arg] !== undefined) {
+                    printText(fileSystem[currentDir].files[arg]);
+                } else {
+                    printText(`Datei "${arg}" nicht gefunden.`, 'error-msg');
+                }
+                break;
+
+            case 'touch':
+                if (!arg) {
+                    printText('Fehler: Kein Dateiname angegeben.', 'error-msg');
+                } else {
+                    fileSystem[currentDir].files[arg] = "";
+                    printText(`Datei "${arg}" wurde erfolgreich erstellt.`, 'success-msg');
+                }
+                break;
+
+            case 'clear':
+                output.innerHTML = '';
+                break;
+
+            case 'date':
+                printText(new Date().toLocaleString('de-DE'));
+                break;
+
+            case 'whoami':
+                printText(currentDir.includes('geheim') ? 'Ein neugieriger Hacker.' : 'guest_user_alpha');
+                break;
+
+            case 'joke':
+                const jokes = [
+                    "Wie viele Programmierer braucht man, um eine Glühbirne zu wechseln? - Keine, das ist ein Hardware-Problem.",
+                    "Es gibt 10 Arten von Menschen: Die, die Binärcode verstehen, und die, die es nicht tun.",
+                    "Ein SQL-Entwickler kommt in eine Bar, geht zu zwei Tischen und fragt: 'Darf ich mich dazustellen?'"
+                ];
+                printText(jokes[Math.floor(Math.random() * jokes.length)]);
+                break;
+
+            case 'sudo':
+                if (!arg) {
+                    printText('Sudo was? Versuche z.B. "sudo hack"', 'error-msg');
+                } else if (arg.toLowerCase() === 'hack') {
+                    printText('Zugriff gewährt... Hacke das Pentagon... █░░░░░░░░░ 10%', 'error-msg');
+                    setTimeout(() => printText('Fehlgeschlagen. Deine IP wurde an das FBI gesendet. 😉', 'error-msg'), 1000);
+                } else {
+                    printText('Du hast hier keine Root-Rechte!', 'error-msg');
+                }
+                break;
+
+            default:
+                printText(`Befehl "${cmd}" nicht gefunden. Tippe 'help' für Hilfe.`, 'error-msg');
+        }
+
+        // Aktualisiere den Prompt-Pfad
+        promptLabel.innerText = `guest@matrix:${getDisplayPath()}$_`;
+    }
+</script>
+
+</body>
+</html>
